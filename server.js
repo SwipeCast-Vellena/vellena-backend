@@ -1,12 +1,15 @@
 const express=require("express");
 const dotenv=require("dotenv");
+const cors = require("cors");
 const authRoutes=require("./routes/authRoutes.js")
 const db=require("./db/db.js")
 
-
 dotenv.config();
 
-const app=express();
+const app = express();
+
+app.use(cors()); // 👈 ALLOW FRONTEND TO ACCESS BACKEND
+
 
 app.use(express.json());
 app.use("/api/auth",authRoutes);
