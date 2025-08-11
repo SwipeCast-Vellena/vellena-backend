@@ -52,7 +52,7 @@ db.getConnection((err, connection) => {
   no_of_employees INT NOT NULL,
   location VARCHAR(100) NOT NULL,
   professional_bio TEXT NOT NULL,
-  website VARCHAR(255) ,
+  website VARCHAR(255),
   FOREIGN KEY (agency_id) REFERENCES users(id) ON DELETE CASCADE
   );`;
 
