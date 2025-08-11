@@ -43,6 +43,19 @@ db.getConnection((err, connection) => {
   FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
   );`;
 
+  const createAgencyTable = `
+  CREATE TABLE IF NOT EXISTS agency(
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  agency_id INT UNIQUE NOT NULL,
+  name VARCHAR(100) NOT NULL,
+  operating_years INT NOT NULL,
+  no_of_employees INT NOT NULL,
+  location VARCHAR(100) NOT NULL,
+  professional_bio TEXT NOT NULL,
+  website VARCHAR(255) ,
+  FOREIGN KEY (agency_id) REFERENCES users(id) ON DELETE CASCADE
+  );`;
+
   connection.query(createUserTable, (err) => {
     if (err) console.error("Failed to create users table:", err.message);
     else console.log("Users table is ready");
@@ -54,6 +67,16 @@ db.getConnection((err, connection) => {
         console.log("Model table created");
       }
     });
+
+    connection.query(createAgencyTable,(err)=>{
+      if(err){
+        console.error("Failed to create agency table");
+      }
+      else{
+        console.log("Agency table created");
+      }
+    })
+
     connection.release(); // Release it back to pool
   });
 });
