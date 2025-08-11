@@ -56,28 +56,32 @@ db.getConnection((err, connection) => {
   FOREIGN KEY (agency_id) REFERENCES users(id) ON DELETE CASCADE
   );`;
 
+  // Changed: Added nested error handling for each table creation, 
+  // so that all errors are logged and subsequent queries still run.
   connection.query(createUserTable, (err) => {
-    if (err) console.error("Failed to create users table:", err.message);
-    else console.log("Users table is ready");
+    if (err) {
+      console.error("Failed to create users table:", err.message);
+    } else {
+      console.log("Users table is ready");
+    }
 
     connection.query(createModelsTable, (err) => {
       if (err) {
-        console.error("Failed to create models table");
+        console.error("Failed to create models table:", err.message);
       } else {
         console.log("Model table created");
       }
+
+      connection.query(createAgencyTable, (err) => {
+        if (err) {
+          console.error("Failed to create agency table:", err.message);
+        } else {
+          console.log("Agency table created");
+        }
+
+        connection.release(); // Release connection back to pool after all queries done
+      });
     });
-
-    connection.query(createAgencyTable,(err)=>{
-      if(err){
-        console.error("Failed to create agency table");
-      }
-      else{
-        console.log("Agency table created");
-      }
-    })
-
-    connection.release(); // Release it back to pool
   });
 });
 
