@@ -2,6 +2,7 @@ const express = require("express");
 const dotenv = require("dotenv");
 const cors = require("cors");
 const authRoutes = require("./routes/authRoutes.js");
+const modelRoutes=require("./routes/modelRoutes.js")
 const db = require("./db/db.js");
 
 dotenv.config();
@@ -13,6 +14,7 @@ app.use(express.json());
 
 // Routes
 app.use("/api/auth", authRoutes);
+app.use("/api/model",modelRoutes);
 
 // ✅ Add ping endpoint here
 app.get('/api/ping', (req, res) => res.send('pong'));

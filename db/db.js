@@ -7,7 +7,7 @@ const db = mysql.createPool({
   host: process.env.DB_HOST,
   user: process.env.DB_USER,
   password: process.env.DB_PASSWORD,
-  database: process.env.DB_NAME
+  database: process.env.DB_NAME,
 });
 
 // Optional: Test and log connection once at startup
@@ -28,9 +28,32 @@ db.getConnection((err, connection) => {
     );
   `;
 
+  const createModelsTable = `
+  CREATE TABLE IF NOT EXISTS model(
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  user_id INT UNIQUE NOT NULL,
+  name VARCHAR(100) NOT NULL,
+  age INT NOT NULL,
+  genre ENUM('Male', 'Female','Other') NOT NULL,
+  height DECIMAL(5,2) NOT NULL,
+  location VARCHAR(100) NOT NULL,
+  description TEXT NOT NULL,
+  video_portfolio VARCHAR(500),
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+  );`;
+
   connection.query(createUserTable, (err) => {
-    if (err) console.error("❌ Failed to create users table:", err.message);
-    else console.log("✅ users table is ready");
+    if (err) console.error("Failed to create users table:", err.message);
+    else console.log("Users table is ready");
+
+    connection.query(createModelsTable, (err) => {
+      if (err) {
+        console.error("Failed to create models table");
+      } else {
+        console.log("Model table created");
+      }
+    });
     connection.release(); // Release it back to pool
   });
 });
