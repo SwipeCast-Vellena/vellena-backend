@@ -5,7 +5,7 @@ exports.createOrUpdateModelProfile = (req, res) => {
   const userId = req.user.id; // from JWT
 
   // Validate required fields - done
-  if (!name || !age || !genre || !height || !location || !description) {
+  if (!name || !age || !genre || !height || !location|| !category || !description) {
     return res.status(400).json({ msg: "Please fill all required fields" });
   }
 
@@ -22,10 +22,10 @@ exports.createOrUpdateModelProfile = (req, res) => {
       // Profile exists → UPDATE
       const updateSql = `
         UPDATE model 
-        SET name=?, age=?, genre=?, height=?, location=?, description=?, video_portfolio=? 
+        SET name=?, age=?, genre=?, height=?, location=?,category=?, description=?, video_portfolio=? 
         WHERE user_id=?`;
 
-      db.query(updateSql, [name, age, genre, height, location, description, video_portfolio, userId], (err) => {
+      db.query(updateSql, [name, age, genre, height, location,category, description, video_portfolio, userId], (err) => {
         if (err) {
           console.error("Failed to update profile:", err);
           return res.status(500).json({ msg: "Failed to update profile", error: err.message });
@@ -35,10 +35,10 @@ exports.createOrUpdateModelProfile = (req, res) => {
     } else {
       // Profile does not exist → INSERT
       const insertSql = `
-        INSERT INTO model (user_id, name, age, genre, height, location, description, video_portfolio)
+        INSERT INTO model (user_id, name, age, genre, height, location,category, description, video_portfolio)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`;
 
-      db.query(insertSql, [userId, name, age, genre, height, location, description, video_portfolio], (err) => {
+      db.query(insertSql, [userId, name, age, genre, height, location,category, description, video_portfolio], (err) => {
         if (err) {
           console.error("Failed to create profile:", err);
           return res.status(500).json({ msg: "Failed to create profile", error: err.message });

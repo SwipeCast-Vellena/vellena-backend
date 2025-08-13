@@ -5,6 +5,7 @@ const authRoutes = require("./routes/authRoutes.js");
 const modelRoutes=require("./routes/modelRoutes.js")
 const agencyRoutes=require("./routes/agencyRoutes.js")
 const uploadRoutes = require("./routes/uploadRoutes.js");
+const campaignRoutes=require("./routes/campaignRoutes.js")
 
 const db = require("./db/db.js");
 
@@ -25,6 +26,7 @@ app.use("/api/auth", authRoutes);
 app.use("/api/model",modelRoutes);
 app.use("/api/agency",agencyRoutes);
 app.use('/api', uploadRoutes);
+app.use('/api',campaignRoutes);
 
 // ✅ Add ping endpoint here
 app.get('/api/ping', (req, res) => res.send('pong'));

@@ -37,6 +37,7 @@ db.getConnection((err, connection) => {
   genre ENUM('Male', 'Female','Other') NOT NULL,
   height DECIMAL(5,2) NOT NULL,
   location VARCHAR(100) NOT NULL,
+  category ENUM('Hostess', 'Model', 'Photographer', 'Promoter', 'Waiter', 'Other') NOT NULL,
   description TEXT NOT NULL,
   video_portfolio VARCHAR(500),
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -54,6 +55,34 @@ db.getConnection((err, connection) => {
   professional_bio TEXT NOT NULL,
   website VARCHAR(255),
   FOREIGN KEY (agency_id) REFERENCES users(id) ON DELETE CASCADE
+  );`;
+
+  const createCampaignsTable=`
+  CREATE TABLE IF NOT EXISTS campaign(
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  agency_profile_id INT NOT NULL,
+  title VARCHAR(300) NOT NULL,
+  category ENUM('Hostess', 'Model', 'Photographer', 'Promoter','Waiter','Other') NOT NULL,
+  start_date DATE NOT NULL,
+  end_date DATE DEFAULT NULL,
+  start_time TIME DEFAULT NULL,
+  end_time TIME DEFAULT NULL,
+  city VARCHAR(100) NOT NULL,
+  address VARCHAR(255) DEFAULT NULL,
+  compensation DECIMAL(10,2) NOT NULL,
+  description VARCHAR(500) NOT NULL,
+  required_people SMALLINT UNSIGNED NOT NULL,
+  deadline DATE NOT NULL,
+  pro_only BOOLEAN NOT NULL DEFAULT FALSE,
+  gender_preference ENUM('any','women','men') NOT NULL DEFAULT 'any',
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT fk_campaign_agency_profile FOREIGN KEY (agency_profile_id) REFERENCES agency(id) ON DELETE CASCADE,
+  INDEX idx_campaigns_agency_profile (agency_profile_id),
+  INDEX idx_campaigns_dates (start_date, end_date),
+  INDEX idx_campaigns_city (city),
+  INDEX idx_campaigns_deadline (deadline)
+
+
   );`;
 
   // Changed: Added nested error handling for each table creation, 
@@ -79,7 +108,13 @@ db.getConnection((err, connection) => {
           console.log("Agency table created");
         }
 
-        connection.release(); // Release connection back to pool after all queries done
+        connection.query(createCampaignsTable, (err) => {
+          if (err) console.error("Failed to create campaigns table:", err.message);
+          else console.log("Campaigns table ready");
+        
+
+        connection.release();
+        }); // Release connection back to pool after all queries done
       });
     });
   });
