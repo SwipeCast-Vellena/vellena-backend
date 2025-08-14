@@ -50,7 +50,10 @@ exports.createOrUpdateCampaign=(req,res)=>{
 
   const lookupSql = "SELECT id FROM agency WHERE agency_id = ?";
   db.query(lookupSql, [req.user.id], (err, results) => {
-    if (err) return res.status(500).json({ msg: "DB error", error: err.message });
+    if (err) {
+      console.error("DB Query Error:", err); // ✅ log full error
+      return res.status(500).json({ msg: "DB error", error: err.message });
+    }
     if (results.length === 0) {
       return res.status(400).json({ msg: "Agency profile not found. Please complete your agency profile before posting." });
     }
@@ -67,29 +70,47 @@ exports.createOrUpdateCampaign=(req,res)=>{
       agencyProfileId, title, category, start_date, end_date, start_time, end_time, city, address,
       compensation, description, required_people, deadline, pro_only ? 1 : 0, gender_preference
     ], (err, result) => {
-      if (err) return res.status(500).json({ msg: "DB error", error: err.message });
+      if (err) {
+        console.error("DB Query Error:", err); // ✅ log full error
+        return res.status(500).json({ msg: "DB error", error: err.message });
+      }
       res.status(201).json({ id: result.insertId, msg: "Campaign created" });
     });
   });
 }
 
 exports.getCampaigns = (req, res) => {
-    let sql;
-    let params = [];
-  
-    // Agencies can only see their own campaigns
-    if (req.user.role === "agency") {
-      sql = "SELECT * FROM campaign WHERE agency_user_id = ? ORDER BY created_at DESC";
-      params.push(req.user.id);
-    } else {
-      // Models can see all campaigns
-      sql = "SELECT * FROM campaign ORDER BY created_at DESC";
+  let sql;
+  let params = [];
+
+  if (req.user.role === "agency") {
+    sql = `
+      SELECT c.*,
+             a.name AS agency_name,  -- ✅ changed column name
+             c.required_people AS application_count
+      FROM campaign c
+      JOIN agency a ON c.agency_profile_id = a.id
+      WHERE a.agency_id = ?
+      ORDER BY c.created_at DESC
+    `;
+    params.push(req.user.id);
+  } else {
+    sql = `
+      SELECT c.*,
+             a.name AS agency_name,  -- ✅ changed column name
+             c.required_people AS application_count
+      FROM campaign c
+      JOIN agency a ON c.agency_profile_id = a.id
+      ORDER BY c.created_at DESC
+    `;
+  }
+
+  db.query(sql, params, (err, results) => {
+    if (err) {
+      console.error("DB Query Error:", err); // ✅ log full error
+      return res.status(500).json({ msg: "DB error", error: err.message });
     }
-  
-    db.query(sql, params, (err, results) => {
-      if (err) {
-        return res.status(500).json({ msg: "DB error", error: err.message });
-      }
-      res.json(results);
-    });
-  };
+
+    res.json(results);
+  });
+};
