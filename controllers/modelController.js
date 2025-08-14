@@ -1,7 +1,7 @@
 const db = require("../db/db.js");
 
 exports.createOrUpdateModelProfile = (req, res) => {
-  const { name, age, genre, height, location, description, video_portfolio } = req.body;
+  const { name, age, genre, height, location, category, description, video_portfolio } = req.body;
   const userId = req.user.id; // from JWT
 
   // Validate required fields - done
@@ -36,7 +36,7 @@ exports.createOrUpdateModelProfile = (req, res) => {
       // Profile does not exist → INSERT
       const insertSql = `
         INSERT INTO model (user_id, name, age, genre, height, location,category, description, video_portfolio)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?)`;
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`;
 
       db.query(insertSql, [userId, name, age, genre, height, location,category, description, video_portfolio], (err) => {
         if (err) {
