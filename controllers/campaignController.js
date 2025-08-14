@@ -3,7 +3,7 @@ const db = require("../db/db.js");
 exports.createOrUpdateCampaign=(req,res)=>{
 
     if(req.user.role!=="agency"){
-        return res.status(403).json({msg:"Only agencies can create job postings"});
+        return res.status(403).json({msg:"Only agencies can create or update job postings"});
     }
 
     const {
@@ -35,7 +35,7 @@ exports.createOrUpdateCampaign=(req,res)=>{
     return res.status(400).json({msg:"Description should be less than 500 characters"})
   }
 
-  
+  const id = req.params.id;
 
   // validate numeric fields
   const compNum = Number(compensation);
@@ -58,6 +58,45 @@ exports.createOrUpdateCampaign=(req,res)=>{
       return res.status(400).json({ msg: "Agency profile not found. Please complete your agency profile before posting." });
     }
     const agencyProfileId = results[0].id;
+
+    if(id){
+      const getSql="SELECT id FROM campaign WHERE id = ? AND agency_profile_id = ?";
+
+      db.query(getSql, [id,agencyProfileId],(err,rows)=>{
+        if (err) {
+          console.error("DB Query Error:", err);
+          return res.status(500).json({ msg: "DB error", error: err.message });
+        }
+        if (rows.length === 0) {
+          return res.status(404).json({ msg: "Campaign not found or you don't have permission to modify it." });
+        }
+
+        const updateSql = `
+          UPDATE campaign SET
+            title = ?, category = ?, start_date = ?, end_date = ?, start_time = ?, end_time = ?,
+            city = ?, address = ?, compensation = ?, description = ?, required_people = ?, deadline = ?,
+            pro_only = ?, gender_preference = ?
+          WHERE id = ? AND agency_profile_id = ?
+        `;
+
+        const params = [
+          title, category, start_date, end_date, start_time, end_time,
+          city, address, compNum, description, peopleNum, deadline,
+          pro_only ? 1 : 0, gender_preference,
+          id, agencyProfileId
+        ];
+
+        db.query(updateSql, params, (err, updateResult) => {
+          if (err) {
+            console.error("DB Query Error:", err);
+            return res.status(500).json({ msg: "DB error", error: err.message });
+          }
+          return res.status(200).json({ id: id, msg: "Campaign updated" });
+        });
+      });
+      return;
+    }
+   
 
     // 2) insert using agency_profile_id
     const insertSql = `

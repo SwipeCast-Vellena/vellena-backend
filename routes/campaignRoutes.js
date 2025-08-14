@@ -6,6 +6,7 @@ const {createOrUpdateCampaign,getCampaigns}=require("../controllers/campaignCont
 const router=express.Router();
 
 router.post("/campaigns",protect,isAgency,createOrUpdateCampaign);
+router.put("/campaigns/:id",protect,isAgency,createOrUpdateCampaign)
 router.get("/campaigns",protect,getCampaigns);
 
 module.exports=router;
