@@ -81,8 +81,17 @@ db.getConnection((err, connection) => {
   INDEX idx_campaigns_dates (start_date, end_date),
   INDEX idx_campaigns_city (city),
   INDEX idx_campaigns_deadline (deadline)
+  );`;
 
-
+  const createCampaignsApplicationTable=`
+  CREATE TABLE IF NOT EXISTS campaign_applications(
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  campaign_id INT  NOT NULL,
+  user_id INT  NOT NULL,
+  applied_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (campaign_id) REFERENCES campaign(id) ON DELETE CASCADE,
+  FOREIGN KEY (user_id) REFERENCES model(id) ON DELETE CASCADE,
+  UNIQUE (campaign_id, user_id)
   );`;
 
   // Changed: Added nested error handling for each table creation, 
@@ -111,9 +120,16 @@ db.getConnection((err, connection) => {
         connection.query(createCampaignsTable, (err) => {
           if (err) console.error("Failed to create campaigns table:", err.message);
           else console.log("Campaigns table ready");
+
+          connection.query(createCampaignsApplicationTable,(err)=>{
+            if(err) console.error("Failed to create campaign application table: ",err.message);
+            else console.log("Campaigns Application table ready");
+
+
+            connection.release();
+          });
         
 
-        connection.release();
         }); // Release connection back to pool after all queries done
       });
     });
