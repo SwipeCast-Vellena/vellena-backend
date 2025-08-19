@@ -94,6 +94,24 @@ db.getConnection((err, connection) => {
   UNIQUE (campaign_id, user_id)
   );`;
 
+  const createCampaignMatchesTable=`
+  CREATE TABLE IF NOT EXISTS campaign_matches(
+   id INT AUTO_INCREMENT PRIMARY KEY,
+    campaign_id INT NOT NULL,
+    model_id INT NOT NULL,
+    agency_id INT NOT NULL,
+    score DECIMAL(5,2) NOT NULL DEFAULT 0,
+    matched_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    
+    -- Foreign keys for integrity
+    FOREIGN KEY (campaign_id) REFERENCES campaign(id) ON DELETE CASCADE,
+    FOREIGN KEY (model_id) REFERENCES model(id) ON DELETE CASCADE,
+    FOREIGN KEY (agency_id) REFERENCES agency(id) ON DELETE CASCADE,
+    
+    -- Prevent duplicate matches
+    UNIQUE (campaign_id, model_id)
+  )`
+
   // Changed: Added nested error handling for each table creation, 
   // so that all errors are logged and subsequent queries still run.
   connection.query(createUserTable, (err) => {
@@ -125,8 +143,18 @@ db.getConnection((err, connection) => {
             if(err) console.error("Failed to create campaign application table: ",err.message);
             else console.log("Campaigns Application table ready");
 
+            connection.query(createCampaignMatchesTable,(err)=>{
+              if(err) console.error("Failed to create matches table: ",err.message);
+              else{
+                console.log("Matches table created");
+              }
 
-            connection.release();
+              connection.release();
+
+            });
+
+
+            
           });
         
 

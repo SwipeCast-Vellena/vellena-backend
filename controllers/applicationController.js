@@ -1,4 +1,5 @@
 const db=require("../db/db.js");
+const {calcMatchScore}=require("../utils/match.js");
 exports.applyToCampaign = (req, res) => {
     const campaignId = Number(req.params.id);
     const userId = Number(req.user && req.user.id);
@@ -22,9 +23,9 @@ exports.applyToCampaign = (req, res) => {
           return res.status(500).json({ success: false, msg: "Failed to start transaction." });
         }
   
-        // Step 1: get model_id from model table
+        // Step 1: get model row from model table
         connection.query(
-          "SELECT id FROM model WHERE user_id = ? LIMIT 1",
+          "SELECT * FROM model WHERE user_id = ? LIMIT 1",
           [userId],
           (err, modelRows) => {
             if (err) {
@@ -36,11 +37,11 @@ exports.applyToCampaign = (req, res) => {
               return res.status(404).json({ success: false, msg: "Model profile not found." });
             }
   
-            const modelId = modelRows[0].id;
+            const modelRow = modelRows[0];
   
             // Step 2: verify campaign exists
             connection.query(
-              "SELECT id FROM campaign WHERE id = ? LIMIT 1",
+              "SELECT * FROM campaign WHERE id = ? LIMIT 1",
               [campaignId],
               (err, campaignRows) => {
                 if (err) {
@@ -51,11 +52,13 @@ exports.applyToCampaign = (req, res) => {
                   connection.rollback(() => connection.release());
                   return res.status(404).json({ success: false, msg: "Campaign not found." });
                 }
+
+                const campaignRow = campaignRows[0];
   
                 // Step 3: check if already applied
                 connection.query(
                   "SELECT id FROM campaign_applications WHERE campaign_id = ? AND user_id = ? LIMIT 1",
-                  [campaignId, modelId],
+                  [campaignId, modelRow.id],
                   (err, existRows) => {
                     if (err) {
                       connection.rollback(() => connection.release());
@@ -69,7 +72,7 @@ exports.applyToCampaign = (req, res) => {
                     // Step 4: insert
                     connection.query(
                       "INSERT INTO campaign_applications (campaign_id, user_id, applied_at) VALUES (?, ?, NOW())",
-                      [campaignId, modelId],
+                      [campaignId, modelRow.id],
                       (err, insertRes) => {
                         if (err) {
                           const isDuplicate = err.code === "ER_DUP_ENTRY" || err.errno === 1062;
@@ -81,8 +84,14 @@ exports.applyToCampaign = (req, res) => {
                               : "Failed to create application."
                           });
                         }
+
+                        const { score, reasons } = calcMatchScore(modelRow, campaignRow);
+                      const threshold = 50.0;
+
+                      // If score >= threshold, upsert into campaign_matches
+                      const doMatchInsert = score >= threshold;
   
-                        connection.commit((err) => {
+                        const finishCommit=()=>{connection.commit((err) => {
                           if (err) {
                             connection.rollback(() => connection.release());
                             return res.status(500).json({ ok: false, msg: "Failed to commit transaction." });
@@ -91,9 +100,35 @@ exports.applyToCampaign = (req, res) => {
                           return res.status(201).json({
                             success: true,
                             msg: "Applied successfully.",
-                            applicationId: insertRes.insertId
+                            applicationId: insertRes.insertId,
+                            match: doMatchInsert ? { matched: true, score, reasons } : { matched: false, score, reasons }
                           });
+                        
                         });
+                      }
+                      if (!doMatchInsert) {
+                        // no match insert required, just commit
+                        return finishCommit();
+                      }
+
+                      // Insert into campaign_matches with ON DUPLICATE KEY UPDATE to refresh matched_at & score
+                      connection.query(
+                        `INSERT INTO campaign_matches (campaign_id, model_id, agency_id, score, matched_at)
+                         VALUES (?, ?, ?, ?, NOW())
+                         ON DUPLICATE KEY UPDATE score = VALUES(score), matched_at = NOW()`,
+                        [campaignId, modelRow.id, campaignRow.agency_profile_id, score],
+                        (err, matchRes) => {
+                          if (err) {
+                            // match insert failed: rollback the whole transaction (so application won't be created without match upsert)
+                            connection.rollback(() => connection.release());
+                            console.error("Failed to insert campaign_matches:", err);
+                            return res.status(500).json({ success: false, msg: "Failed to create match record." });
+                          }
+
+                          // everything ok -> commit
+                          return finishCommit();
+                        }
+                      );
                       }
                     );
                   }
