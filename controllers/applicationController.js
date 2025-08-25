@@ -224,6 +224,8 @@ exports.approveMatch = (req, res) => {
                   .json({ success: false, msg: "Campaign not found for this agency." });
               }
 
+              
+
               // 3) Approve match
               connection.query(
                 `UPDATE campaign_matches
@@ -314,4 +316,22 @@ exports.getMatchStatus = (req, res) => {
       });
     }
   );
+};
+
+exports.getMyModelId = (req, res) => {
+  const userId = Number(req.user && req.user.id);
+  if (!userId || Number.isNaN(userId)) {
+    return res.status(401).json({ success: false, msg: "Unauthorized" });
+  }
+
+  db.query("SELECT id FROM model WHERE user_id = ? LIMIT 1", [userId], (err, rows) => {
+    if (err) {
+      console.error("DB error fetching model id:", err);
+      return res.status(500).json({ success: false, msg: "DB error." });
+    }
+    if (!rows.length) {
+      return res.status(404).json({ success: false, msg: "Model profile not found." });
+    }
+    return res.json({ success: true, modelId: Number(rows[0].id) });
+  });
 };

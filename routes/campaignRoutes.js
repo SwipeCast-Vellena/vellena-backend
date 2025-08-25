@@ -2,7 +2,7 @@ const express = require("express");
 const { protect, isAgency, isModel } = require("../middlewares/authMiddleware.js");
 
 const { createOrUpdateCampaign, getCampaigns } = require("../controllers/campaignController.js");
-const { applyToCampaign, approveMatch, getMatchStatus } = require("../controllers/applicationController.js");
+const { applyToCampaign, approveMatch, getMatchStatus, getMyModelId } = require("../controllers/applicationController.js");
 
 const router = express.Router();
 
@@ -19,5 +19,7 @@ router.post("/campaigns/:campaignId/approve/:modelId", protect, isAgency, approv
 
 // check match status
 router.get("/campaigns/:campaignId/matches/:modelId/status", protect, getMatchStatus);
+
+router.get("/model-id", protect, getMyModelId);
 
 module.exports = router;

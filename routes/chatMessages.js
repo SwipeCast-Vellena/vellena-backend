@@ -131,5 +131,49 @@ console.log('chat participants:', chatSnap.exists ? chatSnap.data().participantU
       return res.status(500).json({ ok: false, msg: 'Server error' });
     }
   });
+
+  // GET /api/chat/:chatId/messages
+router.get('/:chatId/messages', protect, async (req, res) => {
+  try {
+    const chatId = String(req.params.chatId || '');
+    if (!chatId) return res.status(400).json({ success: false, msg: 'chatId required' });
+
+    const chatRef = firestore.collection('chats').doc(chatId);
+    const chatSnap = await chatRef.get();
+    if (!chatSnap.exists) {
+      return res.status(404).json({ success: false, msg: 'Chat not found' });
+    }
+
+    const chatData = chatSnap.data() || {};
+    const title = chatData.title || (chatData.campaignId ? `Campaign #${chatData.campaignId}` : chatData.chatId || null);
+
+    // Read messages subcollection ordered oldest -> newest
+    const msgsSnap = await chatRef.collection('messages').orderBy('createdAt', 'asc').get();
+
+    const messages = msgsSnap.docs.map((d) => {
+      const dt = d.get('createdAt');
+      const createdAt =
+        dt && typeof dt.toDate === 'function'
+          ? { seconds: dt.seconds, nanoseconds: dt.nanoseconds }
+          : dt || null;
+
+      return {
+        id: d.id,
+        text: d.get('text') || '',
+        senderUid: d.get('senderUid') || null,
+        senderBackendId: d.get('senderBackendId') || null,
+        type: d.get('type') || 'text',
+        attachmentUrl: d.get('attachmentUrl') || null,
+        readBy: d.get('readBy') || [],
+        createdAt,
+      };
+    });
+
+    return res.json({ success: true, title, messages });
+  } catch (err) {
+    console.error('GET /api/chat/:chatId/messages error:', err);
+    return res.status(500).json({ success: false, msg: 'Server error' });
+  }
+});
   
   module.exports = router;

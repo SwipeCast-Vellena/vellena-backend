@@ -31,6 +31,7 @@ app.use('/api', uploadRoutes);
 app.use('/api',campaignRoutes);
 app.use('/api/firebase', firebaseAuthRoutes);
 app.use("/api/chat",messagesRoute);
+app.use("/api/me", campaignRoutes);
 
 // ✅ Add ping endpoint here
 app.get('/api/ping', (req, res) => res.send('pong'));
