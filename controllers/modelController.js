@@ -65,3 +65,54 @@ exports.getModelProfile = (req, res) => {
     return res.json(results[0]);
   });
 };
+
+exports.getAllModels = (req, res) => {
+  const sql = "SELECT id, name, age, genre, height, location, category, description, video_portfolio FROM model";
+
+  db.query(sql, (err, results) => {
+    if (err) {
+      console.error("Database error on getting models:", err);
+      return res.status(500).json({ success: false, msg: "Database error", error: err.message });
+    }
+
+    return res.json({
+      success: true,
+      count: results.length,
+      models: results,
+    });
+  });
+};
+
+exports.getApprovedMatches=(req,res)=>{
+  const campaignId = req.query.campaignId ? Number(req.query.campaignId) : null;
+  const userId = req.user.id;
+
+  let sql = `
+    SELECT 
+      c.*,                -- all campaign fields
+      m.id   AS modelId,  -- the actual model.id
+      m.name AS modelName
+      
+    FROM campaign_matches cm
+    JOIN campaign c ON c.id = cm.campaign_id
+    JOIN model m ON m.id = cm.model_id
+    WHERE cm.agency_approved = 1
+      AND m.user_id = ?
+  `;
+
+  const params = [userId];
+
+  if (campaignId) {
+    sql += " AND cm.campaign_id = ?";
+    params.push(campaignId);
+  }
+
+  db.query(sql, params, (err, results) => {
+    if (err) {
+      console.error("DB error getApprovedMatchesSimple:", err);
+      return res.status(500).json({ success: false, msg: "Database error" });
+    }
+    return res.json({ success: true, count: results.length, campaigns: results });
+  });
+
+}
