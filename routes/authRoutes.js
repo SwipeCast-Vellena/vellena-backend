@@ -8,6 +8,7 @@ const router= express.Router();
 router.post("/register",register);
 router.post("/login",login);
 
+
 router.get("/model-dashboard",protect,isModel,(req,res)=>{
     res.json({msg:"Welcome Model!"})
 });

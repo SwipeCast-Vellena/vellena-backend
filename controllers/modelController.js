@@ -83,6 +83,23 @@ exports.getAllModels = (req, res) => {
   });
 };
 
+exports.getModelProfileByUserId = (req, res) => {
+  const modelId = req.params.id;
+
+  db.query("SELECT * FROM model WHERE id = ?", [modelId], (err, results) => {
+    if (err) {
+      console.error("Database error on get profile by userId:", err);
+      return res.status(500).json({ msg: "Database error", error: err.message });
+    }
+
+    if (results.length === 0) {
+      return res.status(404).json({ msg: "Profile not found" });
+    }
+
+    return res.json(results[0]);
+  });
+};
+
 exports.getApprovedMatches = (req, res) => {
   const campaignId = req.query.campaignId ? Number(req.query.campaignId) : null;
   const userId = req.user.id;
