@@ -8,6 +8,8 @@ const uploadRoutes = require("./routes/uploadRoutes.js");
 const campaignRoutes=require("./routes/campaignRoutes.js")
 const firebaseAuthRoutes=require("./routes/firebaseAuth.js");
 const messagesRoute=require("./routes/chatMessages.js");
+const favoriteRoute=require("./routes/favoriteRoutes.js");
+const videoRoutes=require("./controllers/videoController.js");
 
 const db = require("./db/db.js");
 
@@ -32,6 +34,8 @@ app.use('/api',campaignRoutes);
 app.use('/api/firebase', firebaseAuthRoutes);
 app.use("/api/chat",messagesRoute);
 app.use("/api/me", campaignRoutes);
+app.use("/api",favoriteRoute);
+app.use("/",videoRoutes);
 
 // ✅ Add ping endpoint here
 app.get('/api/ping', (req, res) => res.send('pong'));

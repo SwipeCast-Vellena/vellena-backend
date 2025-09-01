@@ -52,7 +52,14 @@ exports.createOrUpdateModelProfile = (req, res) => {
 exports.getModelProfile = (req, res) => {
   const userId = req.user.id;
 
-  db.query("SELECT * FROM model WHERE user_id = ?", [userId], (err, results) => {
+  const sql = `
+    SELECT m.*, u.email
+    FROM model m
+    JOIN users u ON m.user_id = u.id
+    WHERE m.user_id = ?
+  `;
+
+  db.query(sql, [userId], (err, results) => {
     if (err) {
       console.error("Database error on get profile:", err);
       return res.status(500).json({ msg: "Database error", error: err.message });
@@ -62,9 +69,10 @@ exports.getModelProfile = (req, res) => {
       return res.status(404).json({ msg: "Profile not found" });
     }
 
-    return res.json(results[0]);
+    return res.json(results[0]); // now includes email
   });
 };
+
 
 exports.getAllModels = (req, res) => {
   const sql = "SELECT id, name, age, genre, height, location, category, description, video_portfolio FROM model";

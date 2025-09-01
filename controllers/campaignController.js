@@ -153,3 +153,46 @@ exports.getCampaigns = (req, res) => {
     res.json(results);
   });
 };
+
+exports.getAgencyCampaigns = (req, res) => {
+  if (req.user.role !== "agency") {
+    return res.status(403).json({ msg: "Access denied. Only agencies can access their campaigns." });
+  }
+
+  // First, get the agency profile ID from the logged-in user
+  const getAgencyProfileSql = "SELECT id FROM agency WHERE agency_id = ?";
+  db.query(getAgencyProfileSql, [req.user.id], (err, agencyResults) => {
+    if (err) {
+      console.error("DB Error fetching agency profile:", err);
+      return res.status(500).json({ msg: "DB error", error: err.message });
+    }
+
+    if (!agencyResults.length) {
+      return res.status(404).json({ msg: "Agency profile not found for this user" });
+    }
+
+    const agencyProfileId = agencyResults[0].id;
+
+    // Now fetch campaigns for this agency
+    const campaignsSql = `
+      SELECT c.*,
+             a.name AS agency_name,
+             c.required_people AS application_count
+      FROM campaign c
+      JOIN agency a ON c.agency_profile_id = a.id
+      WHERE a.id = ?
+      ORDER BY c.created_at DESC
+    `;
+
+    db.query(campaignsSql, [agencyProfileId], (err, campaignResults) => {
+      if (err) {
+        console.error("DB Query Error:", err);
+        return res.status(500).json({ msg: "DB error", error: err.message });
+      }
+
+      res.json(campaignResults);
+    });
+  });
+};
+
+

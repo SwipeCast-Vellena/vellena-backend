@@ -118,6 +118,17 @@ db.getConnection((err, connection) => {
     ADD COLUMN agency_approved TINYINT(1) NOT NULL DEFAULT 0 AFTER score;
   `;
 
+  const createFavoritesTable=`
+  CREATE TABLE favorites (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  agency_id INT NOT NULL,
+  model_id INT NOT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE KEY unique_fav (agency_id, model_id), -- prevent duplicate likes
+  FOREIGN KEY (agency_id) REFERENCES agency(id),
+  FOREIGN KEY (model_id) REFERENCES model(id)
+);`
+
   // Run tables in sequence
   connection.query(createUserTable, (err) => {
     if (err) return console.error("Failed to create users table:", err.message);
@@ -154,7 +165,11 @@ db.getConnection((err, connection) => {
                 } else {
                   console.log("✅ agency_approved column added");
                 }
+                connection.query(createFavoritesTable, (err) => {
+                  if (err) return console.error("Failed to create favorites table:", err.message);
+                  console.log("✅ Favorites table ready");
                 connection.release();
+                });
               });
             });
           });
