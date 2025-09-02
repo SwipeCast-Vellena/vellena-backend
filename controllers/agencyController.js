@@ -105,3 +105,39 @@ exports.getAgencyProfile = (req, res) => {
     res.json(results[0]);
   });
 };
+
+exports.getApprovedMatchesForAgency = (req, res) => {
+  const campaignId = req.query.campaignId ? Number(req.query.campaignId) : null;
+  const userId = req.user.id; // logged-in agency user
+
+  let sql = `
+    SELECT 
+      c.*,                       -- all campaign fields
+      m.id   AS modelId,         -- model id
+      m.name AS modelName,       -- model name
+      a.id   AS agencyId,        -- agency id
+      a.name AS agencyName       -- agency name
+    FROM campaign_matches cm
+    JOIN campaign c ON c.id = cm.campaign_id
+    JOIN model m ON m.id = cm.model_id
+    JOIN agency a ON a.id = c.agency_profile_id   -- join agency
+    WHERE cm.agency_approved = 1
+      AND a.agency_id = ?
+  `;
+
+  const params = [userId];
+
+  if (campaignId) {
+    sql += " AND cm.campaign_id = ?";
+    params.push(campaignId);
+  }
+
+  db.query(sql, params, (err, results) => {
+    if (err) {
+      console.error("DB error getApprovedMatchesForAgency:", err);
+      return res.status(500).json({ success: false, msg: "Database error" });
+    }
+    return res.json({ success: true, count: results.length, campaigns: results });
+  });
+};
+
