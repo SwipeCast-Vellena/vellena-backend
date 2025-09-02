@@ -25,7 +25,8 @@ app.use(express.json());
 
 // --- Static file serving ---
 app.use("/videos", express.static(path.join(__dirname, "uploads/videos")));
-app.use("/photos", express.static(path.join(__dirname, "uploads/model_photos"))); // ✅ expose photos
+app.use("/uploads/model_photos", express.static(path.join(__dirname, "uploads/model_photos")));
+
 
 // --- Routes ---
 app.use("/api/auth", authRoutes);
