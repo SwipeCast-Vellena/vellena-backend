@@ -146,6 +146,13 @@ router.get('/:chatId/messages', protect, async (req, res) => {
 
     const chatData = chatSnap.data() || {};
     const title = chatData.title || (chatData.campaignId ? `Campaign #${chatData.campaignId}` : chatData.chatId || null);
+    const agencyId = chatData.agencyId || null;
+    let agencyInfo = null;
+    console.log('chat participants:', agencyId);
+    if (agencyId) {
+      const [rows] = await db.promise().query('SELECT * FROM agency WHERE id = ?', [agencyId]);
+      if (rows.length) agencyInfo = rows[0]; // <-- this should contain the full agency info
+    }
 
     // Read messages subcollection ordered oldest -> newest
     const msgsSnap = await chatRef.collection('messages').orderBy('createdAt', 'asc').get();
@@ -169,7 +176,7 @@ router.get('/:chatId/messages', protect, async (req, res) => {
       };
     });
 
-    return res.json({ success: true, title, messages });
+      return res.json({ success: true, title, agencyInfo, messages });
   } catch (err) {
     console.error('GET /api/chat/:chatId/messages error:', err);
     return res.status(500).json({ success: false, msg: 'Server error' });
