@@ -1,15 +1,18 @@
 const express = require("express");
 const dotenv = require("dotenv");
 const cors = require("cors");
+const path = require("path");
+
 const authRoutes = require("./routes/authRoutes.js");
-const modelRoutes=require("./routes/modelRoutes.js")
-const agencyRoutes=require("./routes/agencyRoutes.js")
+const modelRoutes = require("./routes/modelRoutes.js");
+const agencyRoutes = require("./routes/agencyRoutes.js");
 const uploadRoutes = require("./routes/uploadRoutes.js");
-const campaignRoutes=require("./routes/campaignRoutes.js")
-const firebaseAuthRoutes=require("./routes/firebaseAuth.js");
-const messagesRoute=require("./routes/chatMessages.js");
-const favoriteRoute=require("./routes/favoriteRoutes.js");
-const videoRoutes=require("./controllers/videoController.js");
+const campaignRoutes = require("./routes/campaignRoutes.js");
+const firebaseAuthRoutes = require("./routes/firebaseAuth.js");
+const messagesRoute = require("./routes/chatMessages.js");
+const favoriteRoute = require("./routes/favoriteRoutes.js");
+const videoRoutes = require("./controllers/videoController.js");
+const modelPhotosRoutes = require("./routes/modelPhotosRoutes.js"); // ✅ NEW
 
 const db = require("./db/db.js");
 
@@ -20,29 +23,29 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-const path = require("path");
+// --- Static file serving ---
 app.use("/videos", express.static(path.join(__dirname, "uploads/videos")));
+app.use("/photos", express.static(path.join(__dirname, "uploads/model_photos"))); // ✅ expose photos
 
-
-
-// Routes
+// --- Routes ---
 app.use("/api/auth", authRoutes);
-app.use("/api/model",modelRoutes);
-app.use("/api/agency",agencyRoutes);
-app.use('/api', uploadRoutes);
-app.use('/api',campaignRoutes);
-app.use('/api/firebase', firebaseAuthRoutes);
-app.use("/api/chat",messagesRoute);
+app.use("/api/model", modelRoutes);
+app.use("/api/agency", agencyRoutes);
+app.use("/api", uploadRoutes);
+app.use("/api", campaignRoutes);
+app.use("/api/firebase", firebaseAuthRoutes);
+app.use("/api/chat", messagesRoute);
 app.use("/api/me", campaignRoutes);
-app.use("/api",favoriteRoute);
-app.use("/",videoRoutes);
+app.use("/api", favoriteRoute);
+app.use("/", videoRoutes);
+app.use("/api/model/photos", modelPhotosRoutes); // ✅ NEW
 
-// ✅ Add ping endpoint here
-app.get('/api/ping', (req, res) => res.send('pong'));
+// --- Ping / healthcheck ---
+app.get("/api/ping", (req, res) => res.send("pong"));
 
-// Optional: get all users (used for development/debugging)
-app.get('/users', (req, res) => {
-  db.query('SELECT * FROM users', (err, results) => {
+// --- Debug: list all users (dev only) ---
+app.get("/users", (req, res) => {
+  db.query("SELECT * FROM users", (err, results) => {
     if (err) return res.status(500).json({ error: err.message });
     res.json(results);
   });

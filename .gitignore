@@ -13,3 +13,6 @@ logs
 Thumbs.db
 .vscode/
 .idea/
+
+# Ignore service account keys
+serviceAccountKey.json

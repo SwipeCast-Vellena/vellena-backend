@@ -118,19 +118,34 @@ db.getConnection((err, connection) => {
     ADD COLUMN agency_approved TINYINT(1) NOT NULL DEFAULT 0 AFTER score;
   `;
 
-  const createFavoritesTable=`
-  CREATE TABLE favorites (
-  id INT AUTO_INCREMENT PRIMARY KEY,
-  agency_id INT NOT NULL,
-  model_id INT NOT NULL,
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  UNIQUE KEY unique_fav (agency_id, model_id), -- prevent duplicate likes
-  FOREIGN KEY (agency_id) REFERENCES agency(id),
-  FOREIGN KEY (model_id) REFERENCES model(id)
-);`
+  const createFavoritesTable = `
+    CREATE TABLE IF NOT EXISTS favorites (
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      agency_id INT NOT NULL,
+      model_id INT NOT NULL,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      UNIQUE KEY unique_fav (agency_id, model_id), -- prevent duplicate likes
+      FOREIGN KEY (agency_id) REFERENCES agency(id),
+      FOREIGN KEY (model_id) REFERENCES model(id)
+    );
+  `;
+
+  const createModelPhotosTable = `
+      CREATE TABLE IF NOT EXISTS model_photo (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        model_id INT NOT NULL,
+        group_label VARCHAR(100) NOT NULL DEFAULT 'Portfolio',
+        url VARCHAR(1024) NOT NULL,
+        position TINYINT UNSIGNED NULL,
+        created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (model_id) REFERENCES model(id) ON DELETE CASCADE,
+        UNIQUE KEY uniq_model_group_pos (model_id, group_label, position),
+        INDEX idx_model_group (model_id, group_label)
+      );
+    `;
 
   // Run tables in sequence
-  connection.query(createUserTable, (err) => {
+connection.query(createUserTable, (err) => {
     if (err) return console.error("Failed to create users table:", err.message);
     console.log("✅ Users table ready");
 
@@ -165,10 +180,17 @@ db.getConnection((err, connection) => {
                 } else {
                   console.log("✅ agency_approved column added");
                 }
+
                 connection.query(createFavoritesTable, (err) => {
                   if (err) return console.error("Failed to create favorites table:", err.message);
                   console.log("✅ Favorites table ready");
-                connection.release();
+
+                  connection.query(createModelPhotosTable, (err) => {
+                    if (err) return console.error("Failed to create model_photo table:", err.message);
+                    console.log("✅ Model photos table ready");
+
+                    connection.release();
+                  });
                 });
               });
             });
