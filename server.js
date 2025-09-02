@@ -24,7 +24,7 @@ app.use(cors());
 app.use(express.json());
 
 // --- Static file serving ---
-app.use("/videos", express.static(path.join(__dirname, "uploads/videos")));
+app.use("/uploads/videos", express.static(path.join(__dirname, "uploads/videos")));
 app.use("/uploads/model_photos", express.static(path.join(__dirname, "uploads/model_photos")));
 
 
