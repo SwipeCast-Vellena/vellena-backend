@@ -21,7 +21,9 @@ const db = require("./db/db.js");
 dotenv.config();
 
 const app = express();
-app.use(cors());
+app.use(cors({
+  origin: process.env.FRONTEND_URL
+}));
 
 // --- JSON middleware except for Stripe webhook ---
 app.use((req, res, next) => {
