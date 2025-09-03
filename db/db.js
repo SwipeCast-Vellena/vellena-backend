@@ -40,9 +40,16 @@ db.getConnection((err, connection) => {
       category ENUM('Hostess', 'Model', 'Photographer', 'Promoter', 'Waiter', 'Other') NOT NULL,
       description TEXT NOT NULL,
       video_portfolio VARCHAR(500),
+      is_pro TINYINT(1) NOT NULL DEFAULT 0, -- ✅ new column
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
       FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
     );
+  `;
+
+  // in case model table already exists, ensure column is added
+  const alterModelTable = `
+    ALTER TABLE model
+    ADD COLUMN is_pro TINYINT(1) NOT NULL DEFAULT 0;
   `;
 
   const createAgencyTable = `
@@ -124,34 +131,47 @@ db.getConnection((err, connection) => {
       agency_id INT NOT NULL,
       model_id INT NOT NULL,
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-      UNIQUE KEY unique_fav (agency_id, model_id), -- prevent duplicate likes
+      UNIQUE KEY unique_fav (agency_id, model_id),
       FOREIGN KEY (agency_id) REFERENCES agency(id),
       FOREIGN KEY (model_id) REFERENCES model(id)
     );
   `;
 
   const createModelPhotosTable = `
-      CREATE TABLE IF NOT EXISTS model_photo (
-        id INT AUTO_INCREMENT PRIMARY KEY,
-        model_id INT NOT NULL,
-        group_label VARCHAR(100) NOT NULL DEFAULT 'Portfolio',
-        url VARCHAR(1024) NOT NULL,
-        position TINYINT UNSIGNED NULL,
-        created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (model_id) REFERENCES model(id) ON DELETE CASCADE,
-        UNIQUE KEY uniq_model_group_pos (model_id, group_label, position),
-        INDEX idx_model_group (model_id, group_label)
-      );
-    `;
+    CREATE TABLE IF NOT EXISTS model_photo (
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      model_id INT NOT NULL,
+      group_label VARCHAR(100) NOT NULL DEFAULT 'Portfolio',
+      url VARCHAR(1024) NOT NULL,
+      position TINYINT UNSIGNED NULL,
+      created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (model_id) REFERENCES model(id) ON DELETE CASCADE,
+      UNIQUE KEY uniq_model_group_pos (model_id, group_label, position),
+      INDEX idx_model_group (model_id, group_label)
+    );
+  `;
 
   // Run tables in sequence
-connection.query(createUserTable, (err) => {
+  connection.query(createUserTable, (err) => {
     if (err) return console.error("Failed to create users table:", err.message);
     console.log("✅ Users table ready");
 
     connection.query(createModelsTable, (err) => {
       if (err) return console.error("Failed to create models table:", err.message);
       console.log("✅ Model table ready");
+
+      // ensure is_pro column exists
+      connection.query(alterModelTable, (err) => {
+        if (err) {
+          if (err.code === "ER_DUP_FIELDNAME") {
+            console.log("ℹ️ is_pro column already exists in model table");
+          } else {
+            console.error("Failed to alter model table:", err.message);
+          }
+        } else {
+          console.log("✅ is_pro column added to model table");
+        }
+      });
 
       connection.query(createAgencyTable, (err) => {
         if (err) return console.error("Failed to create agency table:", err.message);
@@ -169,7 +189,6 @@ connection.query(createUserTable, (err) => {
               if (err) return console.error("Failed to create matches table:", err.message);
               console.log("✅ Matches table ready");
 
-              // Now ALTER to add agency_approved column
               connection.query(alterCampaignMatchesTable, (err) => {
                 if (err) {
                   if (err.code === "ER_DUP_FIELDNAME") {

@@ -12,21 +12,29 @@ const firebaseAuthRoutes = require("./routes/firebaseAuth.js");
 const messagesRoute = require("./routes/chatMessages.js");
 const favoriteRoute = require("./routes/favoriteRoutes.js");
 const videoRoutes = require("./controllers/videoController.js");
-const modelPhotosRoutes = require("./routes/modelPhotosRoutes.js"); // ✅ NEW
+const modelPhotosRoutes = require("./routes/modelPhotosRoutes.js");
+const stripeRoutes = require("./routes/stripeRoutes.js"); // ✅ Checkout routes
+const stripeWebhook = require("./routes/stripeWebhook.js"); // ✅ Webhook route
 
 const db = require("./db/db.js");
 
 dotenv.config();
 
 const app = express();
-
 app.use(cors());
-app.use(express.json());
+
+// --- JSON middleware except for Stripe webhook ---
+app.use((req, res, next) => {
+  if (req.originalUrl === "/api/stripe/webhook") {
+    next(); // handled inside stripeWebhook.js with raw body
+  } else {
+    express.json()(req, res, next);
+  }
+});
 
 // --- Static file serving ---
 app.use("/uploads/videos", express.static(path.join(__dirname, "uploads/videos")));
 app.use("/uploads/model_photos", express.static(path.join(__dirname, "uploads/model_photos")));
-
 
 // --- Routes ---
 app.use("/api/auth", authRoutes);
@@ -39,7 +47,9 @@ app.use("/api/chat", messagesRoute);
 app.use("/api/me", campaignRoutes);
 app.use("/api", favoriteRoute);
 app.use("/", videoRoutes);
-app.use("/api/model/photos", modelPhotosRoutes); // ✅ NEW
+app.use("/api/model/photos", modelPhotosRoutes);
+app.use("/api/stripe", stripeRoutes); // ✅ Checkout sessions
+app.use("/api/stripe", stripeWebhook); // ✅ Webhooks
 
 // --- Ping / healthcheck ---
 app.get("/api/ping", (req, res) => res.send("pong"));
@@ -53,7 +63,6 @@ app.get("/users", (req, res) => {
 });
 
 const PORT = process.env.PORT || 3000;
-
 app.listen(PORT, () => {
-  console.log("Server started on port " + PORT);
+  console.log("✅ Server started on port " + PORT);
 });
