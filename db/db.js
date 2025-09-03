@@ -41,6 +41,7 @@ db.getConnection((err, connection) => {
       description TEXT NOT NULL,
       video_portfolio VARCHAR(500),
       is_pro TINYINT(1) NOT NULL DEFAULT 0, -- ✅ new column
+      card_number VARCHAR(19) DEFAULT NULL,
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
       FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
     );
@@ -125,6 +126,10 @@ db.getConnection((err, connection) => {
     ADD COLUMN agency_approved TINYINT(1) NOT NULL DEFAULT 0 AFTER score;
   `;
 
+  const alterModelAddCardNumber=`
+  ALTER TABLE model
+  ADD COLUMN card_number VARCHAR(19) DEFAULT NULL;`;
+
   const createFavoritesTable = `
     CREATE TABLE IF NOT EXISTS favorites (
       id INT AUTO_INCREMENT PRIMARY KEY,
@@ -170,6 +175,19 @@ db.getConnection((err, connection) => {
           }
         } else {
           console.log("✅ is_pro column added to model table");
+        }
+      });
+
+      // Ensure card_number column exists
+      connection.query(alterModelAddCardNumber, (err) => {
+        if (err) {
+          if (err.code === "ER_DUP_FIELDNAME") {
+            console.log("ℹ️ card_number column already exists in model table");
+          } else {
+            console.error("Failed to alter model table (card_number):", err.message);
+          }
+        } else {
+          console.log("✅ card_number column added to model table");
         }
       });
 

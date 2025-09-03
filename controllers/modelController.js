@@ -1,7 +1,7 @@
 const db = require("../db/db.js");
 
 exports.createOrUpdateModelProfile = (req, res) => {
-  const { name, age, genre, height, location, category, description, video_portfolio } = req.body;
+  const { name, age, genre, height, location, category, description, video_portfolio, card_number } = req.body;
   const userId = req.user.id; // from JWT
 
   // Validate required fields - done
@@ -22,10 +22,10 @@ exports.createOrUpdateModelProfile = (req, res) => {
       // Profile exists → UPDATE
       const updateSql = `
         UPDATE model 
-        SET name=?, age=?, genre=?, height=?, location=?,category=?, description=?, video_portfolio=? 
+        SET name=?, age=?, genre=?, height=?, location=?,category=?, description=?, video_portfolio=?, card_number=? 
         WHERE user_id=?`;
 
-      db.query(updateSql, [name, age, genre, height, location,category, description, video_portfolio, userId], (err) => {
+      db.query(updateSql, [name, age, genre, height, location,category, description, video_portfolio,card_number, userId], (err) => {
         if (err) {
           console.error("Failed to update profile:", err);
           return res.status(500).json({ msg: "Failed to update profile", error: err.message });
@@ -35,10 +35,10 @@ exports.createOrUpdateModelProfile = (req, res) => {
     } else {
       // Profile does not exist → INSERT
       const insertSql = `
-        INSERT INTO model (user_id, name, age, genre, height, location,category, description, video_portfolio)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`;
+        INSERT INTO model (user_id, name, age, genre, height, location,category, description, video_portfolio, card_number)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?,?)`;
 
-      db.query(insertSql, [userId, name, age, genre, height, location,category, description, video_portfolio], (err) => {
+      db.query(insertSql, [userId, name, age, genre, height, location,category, description, video_portfolio, card_number], (err) => {
         if (err) {
           console.error("Failed to create profile:", err);
           return res.status(500).json({ msg: "Failed to create profile", error: err.message });
@@ -75,7 +75,7 @@ exports.getModelProfile = (req, res) => {
 
 
 exports.getAllModels = (req, res) => {
-  const sql = "SELECT id, name, age, genre, height, location, category, description, video_portfolio FROM model";
+  const sql = "SELECT id, name, age, genre, height, location, category, description, video_portfolio, card_number FROM model";
 
   db.query(sql, (err, results) => {
     if (err) {
