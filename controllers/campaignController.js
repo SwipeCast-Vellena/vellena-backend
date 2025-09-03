@@ -195,4 +195,50 @@ exports.getAgencyCampaigns = (req, res) => {
   });
 };
 
+exports.getCampaignById = (req, res) => {
+  const campaignId = req.params.id;
+
+  if (!campaignId) {
+    return res.status(400).json({ msg: "Campaign ID is required" });
+  }
+
+  // Get agency profile ID if user is an agency
+  const lookupSql = "SELECT id FROM agency WHERE agency_id = ?";
+  db.query(lookupSql, [req.user.id], (err, agencyResults) => {
+    if (err) {
+      console.error("DB Query Error:", err);
+      return res.status(500).json({ msg: "DB error", error: err.message });
+    }
+
+    const agencyProfileId = agencyResults.length ? agencyResults[0].id : null;
+
+    let sql = `
+      SELECT c.*, a.name AS agency_name
+      FROM campaign c
+      JOIN agency a ON c.agency_profile_id = a.id
+      WHERE c.id = ?
+    `;
+    const params = [campaignId];
+
+    if (req.user.role === "agency") {
+      // Ensure the agency can only access its own campaigns
+      sql += " AND c.agency_profile_id = ?";
+      params.push(agencyProfileId);
+    }
+
+    db.query(sql, params, (err, results) => {
+      if (err) {
+        console.error("DB Query Error:", err);
+        return res.status(500).json({ msg: "DB error", error: err.message });
+      }
+      if (results.length === 0) {
+        return res.status(404).json({ msg: "Campaign not found or access denied" });
+      }
+
+      res.json(results[0]); // return single campaign
+    });
+  });
+};
+
+
 
