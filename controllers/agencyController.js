@@ -9,6 +9,8 @@ exports.createOrUpdateAgencyProfile = (req, res) => {
     location,
     professional_bio,
     website,
+    vat_number,
+    pdf_path,
   } = req.body;
 
   const agencyId = req.user.id; // Extract agency ID from authenticated user (JWT)
@@ -37,7 +39,7 @@ exports.createOrUpdateAgencyProfile = (req, res) => {
       // Profile exists → perform UPDATE
       const updateSql = `
         UPDATE agency
-        SET name = ?, operating_years = ?, no_of_employees = ?, location = ?, professional_bio = ?, website = ?
+        SET name = ?, operating_years = ?, no_of_employees = ?, location = ?, professional_bio = ?, website = ?, vat_number = ?, pdf_path = ?
         WHERE agency_id = ?
       `;
 
@@ -50,6 +52,8 @@ exports.createOrUpdateAgencyProfile = (req, res) => {
           location,
           professional_bio,
           website || null, // allow null if website is not provided
+          vat_number || null, // allow null if vat_number is not provided
+          pdf_path || null, // allow null if pdf_path is not provided
           agencyId,
         ],
         (err) => {
@@ -63,8 +67,8 @@ exports.createOrUpdateAgencyProfile = (req, res) => {
     } else {
       // Profile does not exist → perform INSERT
       const insertSql = `
-        INSERT INTO agency (agency_id, name, operating_years, no_of_employees, location, professional_bio, website)
-        VALUES (?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO agency (agency_id, name, operating_years, no_of_employees, location, professional_bio, website, vat_number, pdf_path)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
       `;
 
       db.query(
@@ -77,6 +81,8 @@ exports.createOrUpdateAgencyProfile = (req, res) => {
           location,
           professional_bio,
           website || null,
+          vat_number || null,
+          pdf_path || null,
         ],
         (err) => {
           if (err) {

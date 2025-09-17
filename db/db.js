@@ -195,42 +195,78 @@ db.getConnection((err, connection) => {
         if (err) return console.error("Failed to create agency table:", err.message);
         console.log("✅ Agency table ready");
 
-        connection.query(createCampaignsTable, (err) => {
-          if (err) return console.error("Failed to create campaign table:", err.message);
-          console.log("✅ Campaign table ready");
+        // Add VAT number column to agency table
+        const alterAgencyVatTable = `
+          ALTER TABLE agency 
+          ADD COLUMN vat_number VARCHAR(50) NULL;
+        `;
 
-          connection.query(createCampaignsApplicationTable, (err) => {
-            if (err) return console.error("Failed to create applications table:", err.message);
-            console.log("✅ Applications table ready");
+        connection.query(alterAgencyVatTable, (err) => {
+          if (err) {
+            if (err.code === "ER_DUP_FIELDNAME") {
+              console.log("ℹ️ vat_number column already exists in agency table");
+            } else {
+              console.error("Failed to add vat_number column:", err.message);
+            }
+          } else {
+            console.log("✅ vat_number column added to agency table");
+          }
 
-            connection.query(createCampaignMatchesTable, (err) => {
-              if (err) return console.error("Failed to create matches table:", err.message);
-              console.log("✅ Matches table ready");
+          // Add PDF path column to agency table
+          const alterAgencyPdfTable = `
+            ALTER TABLE agency 
+            ADD COLUMN pdf_path VARCHAR(255) NULL;
+          `;
 
-              connection.query(alterCampaignMatchesTable, (err) => {
-                if (err) {
-                  if (err.code === "ER_DUP_FIELDNAME") {
-                    console.log("ℹ️ agency_approved column already exists");
-                  } else {
-                    console.error("Failed to alter campaign_matches:", err.message);
-                  }
-                } else {
-                  console.log("✅ agency_approved column added");
-                }
+          connection.query(alterAgencyPdfTable, (err) => {
+            if (err) {
+              if (err.code === "ER_DUP_FIELDNAME") {
+                console.log("ℹ️ pdf_path column already exists in agency table");
+              } else {
+                console.error("Failed to add pdf_path column:", err.message);
+              }
+            } else {
+              console.log("✅ pdf_path column added to agency table");
+            }
 
-                connection.query(createFavoritesTable, (err) => {
-                  if (err) return console.error("Failed to create favorites table:", err.message);
-                  console.log("✅ Favorites table ready");
+            connection.query(createCampaignsTable, (err) => {
+              if (err) return console.error("Failed to create campaign table:", err.message);
+              console.log("✅ Campaign table ready");
 
-                  connection.query(createModelPhotosTable, (err) => {
-                    if (err) return console.error("Failed to create model_photo table:", err.message);
-                    console.log("✅ Model photos table ready");
+                connection.query(createCampaignsApplicationTable, (err) => {
+                  if (err) return console.error("Failed to create applications table:", err.message);
+                  console.log("✅ Applications table ready");
 
-                    connection.release();
+                  connection.query(createCampaignMatchesTable, (err) => {
+                    if (err) return console.error("Failed to create matches table:", err.message);
+                    console.log("✅ Matches table ready");
+
+                    connection.query(alterCampaignMatchesTable, (err) => {
+                      if (err) {
+                        if (err.code === "ER_DUP_FIELDNAME") {
+                          console.log("ℹ️ agency_approved column already exists");
+                        } else {
+                          console.error("Failed to alter campaign_matches:", err.message);
+                        }
+                      } else {
+                        console.log("✅ agency_approved column added");
+                      }
+
+                      connection.query(createFavoritesTable, (err) => {
+                        if (err) return console.error("Failed to create favorites table:", err.message);
+                        console.log("✅ Favorites table ready");
+
+                        connection.query(createModelPhotosTable, (err) => {
+                          if (err) return console.error("Failed to create model_photo table:", err.message);
+                          console.log("✅ Model photos table ready");
+
+                          connection.release();
+                        });
+                      });
+                    });
                   });
                 });
               });
-            });
           });
         });
       });
