@@ -79,79 +79,35 @@ exports.applyToCampaign = (req, res) => {
                       .json({ success: false, msg: "You have already applied to this campaign." });
                   }
 
-                  // 4) Insert application
-                  connection.query(
-                    "INSERT INTO campaign_applications (campaign_id, user_id, applied_at) VALUES (?, ?, NOW())",
-                    [campaignId, modelRow.id],
-                    (err, insertRes) => {
-                      if (err) {
-                        const isDuplicate = err.code === "ER_DUP_ENTRY" || err.errno === 1062;
-                        connection.rollback(() => connection.release());
-                        return res.status(isDuplicate ? 409 : 500).json({
-                          success: false,
-                          msg: isDuplicate ? "User already applied" : "Failed to create application.",
-                        });
-                      }
-
-                      // 5) Score & optional match upsert
-                      const { score, reasons } = calcMatchScore(modelRow, campaignRow);
-                      const threshold = 50.0;
-                      const doMatchInsert = score >= threshold;
-
-                      const commitAndRespond = () => {
-                        connection.commit((err) => {
-                          if (err) {
-                            connection.rollback(() => connection.release());
-                            return res
-                              .status(500)
-                              .json({ success: false, msg: "Failed to commit transaction." });
-                          }
-                          connection.release();
-                          // Chat is NOT created here anymore.
-                          return res.status(201).json({
-                            success: true,
-                            msg: "Applied successfully.",
-                            applicationId: insertRes.insertId,
-                            match: doMatchInsert
-                              ? {
-                                  matched: true,
-                                  score,
-                                  reasons,
-                                  agencyApproved: false, // new explicit flag for FE
-                                  chatCreated: false,
-                                }
-                              : { matched: false, score, reasons },
-                          });
-                        });
-                      };
-
-                      if (!doMatchInsert) return commitAndRespond();
-
-                      // 6) Upsert into campaign_matches WITH agency_approved = 0
-                      connection.query(
-                        `INSERT INTO campaign_matches (campaign_id, model_id, agency_id, score, matched_at, agency_approved)
-                         VALUES (?, ?, ?, ?, NOW(), 0)
-                         ON DUPLICATE KEY UPDATE 
-                           score = VALUES(score),
-                           matched_at = NOW(),
-                           agency_approved = 0`,
-                        [campaignId, modelRow.id, campaignRow.agency_profile_id, score],
-                        (err) => {
-                          if (err) {
-                            connection.rollback(() => connection.release());
-                            console.error("Failed to insert/upsert campaign_matches:", err);
-                            return res
-                              .status(500)
-                              .json({ success: false, msg: "Failed to create match record." });
-                          }
-
-                          // (Optional) You could insert a notification for the agency here.
-
-                          return commitAndRespond();
+                  // 3.a) Free-tier monthly cap: max 3 applications in current month
+                  const isPro = !!modelRow.is_pro;
+                  if (!isPro) {
+                    connection.query(
+                      `SELECT COUNT(*) AS cnt
+                       FROM campaign_applications
+                       WHERE user_id = ?
+                         AND YEAR(applied_at) = YEAR(CURDATE())
+                         AND MONTH(applied_at) = MONTH(CURDATE())`,
+                      [modelRow.id],
+                      (err, rowsCount) => {
+                        if (err) {
+                          connection.rollback(() => connection.release());
+                          return res.status(500).json({ success: false, msg: "DB error counting applications." });
                         }
-                      );
-                    }
-                  );
+                        const monthlyCount = (rowsCount && rowsCount[0] && rowsCount[0].cnt) || 0;
+                        if (monthlyCount >= 3) {
+                          connection.rollback(() => connection.release());
+                          return res.status(403).json({ success: false, msg: "Free tier limit reached: 3 applications this month. Upgrade to Pro for unlimited applications." });
+                        }
+
+                        // 4) Insert application (post-cap check)
+                        insertApplicationThenMatch(connection, campaignRow, campaignId, modelRow, res);
+                      }
+                    );
+                  } else {
+                    // Pro users insert directly
+                    insertApplicationThenMatch(connection, campaignRow, campaignId, modelRow, res);
+                  }
                 }
               );
             }
@@ -161,6 +117,77 @@ exports.applyToCampaign = (req, res) => {
     });
   });
 };
+
+// helper: insert application then proceed with match logic
+function insertApplicationThenMatch(connection, campaignRow, campaignId, modelRow, res) {
+  connection.query(
+    "INSERT INTO campaign_applications (campaign_id, user_id, applied_at) VALUES (?, ?, NOW())",
+    [campaignId, modelRow.id],
+    (err, insertRes) => {
+      if (err) {
+        const isDuplicate = err.code === "ER_DUP_ENTRY" || err.errno === 1062;
+        connection.rollback(() => connection.release());
+        return res.status(isDuplicate ? 409 : 500).json({
+          success: false,
+          msg: isDuplicate ? "User already applied" : "Failed to create application.",
+        });
+      }
+
+      // proceed to match flow
+      const { score, reasons } = calcMatchScore(modelRow, campaignRow);
+      const threshold = 50.0;
+      const doMatchInsert = score >= threshold;
+
+      const commitAndRespond = () => {
+        connection.commit((err) => {
+          if (err) {
+            connection.rollback(() => connection.release());
+            return res
+              .status(500)
+              .json({ success: false, msg: "Failed to commit transaction." });
+          }
+          connection.release();
+          return res.status(201).json({
+            success: true,
+            msg: "Applied successfully.",
+            applicationId: insertRes.insertId,
+            match: doMatchInsert
+              ? {
+                  matched: true,
+                  score,
+                  reasons,
+                  agencyApproved: false,
+                  chatCreated: false,
+                }
+              : { matched: false, score, reasons },
+          });
+        });
+      };
+
+      if (!doMatchInsert) return commitAndRespond();
+
+      connection.query(
+        `INSERT INTO campaign_matches (campaign_id, model_id, agency_id, score, matched_at, agency_approved)
+         VALUES (?, ?, ?, ?, NOW(), 0)
+         ON DUPLICATE KEY UPDATE 
+           score = VALUES(score),
+           matched_at = NOW(),
+           agency_approved = 0`,
+        [campaignId, modelRow.id, campaignRow.agency_profile_id, score],
+        (err) => {
+          if (err) {
+            connection.rollback(() => connection.release());
+            console.error("Failed to insert/upsert campaign_matches:", err);
+            return res
+              .status(500)
+              .json({ success: false, msg: "Failed to create match record." });
+          }
+          return commitAndRespond();
+        }
+      );
+    }
+  );
+}
 
 /**
  * POST /api/campaigns/:campaignId/matches/:modelId/approve   (agency only)
@@ -223,8 +250,6 @@ exports.approveMatch = (req, res) => {
                   .status(404)
                   .json({ success: false, msg: "Campaign not found for this agency." });
               }
-
-              
 
               // 3) Approve match
               connection.query(

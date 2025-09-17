@@ -1,6 +1,6 @@
-import path from 'path';
-import fs from 'fs';
-import multer from 'multer';
+const path = require('path');
+const fs = require('fs');
+const multer = require('multer');
 
 // Configure Multer storage
 const storage = multer.diskStorage({
@@ -15,10 +15,10 @@ const storage = multer.diskStorage({
   },
 });
 
-export const upload = multer({ storage }).single('video');
+const upload = multer({ storage }).single('video');
 
 // Controller
-export const uploadVideo = (req, res) => {
+const uploadVideo = (req, res) => {
   if (!req.file) {
     return res.status(400).json({ msg: 'No video file uploaded' });
   }
@@ -30,3 +30,5 @@ export const uploadVideo = (req, res) => {
     msg: 'Video uploaded successfully',
   });
 };
+
+module.exports = { upload, uploadVideo };

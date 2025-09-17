@@ -69,13 +69,17 @@ exports.getModelProfile = (req, res) => {
       return res.status(404).json({ msg: "Profile not found" });
     }
 
-    return res.json(results[0]); // now includes email
+    const row = results[0];
+    const isPro = !!row.is_pro;
+    const badge = isPro ? "Pro" : "Free";
+
+    return res.json({ ...row, badge }); // includes email, is_pro, and badge
   });
 };
 
 
 exports.getAllModels = (req, res) => {
-  const sql = "SELECT id, name, age, genre, height, location, category, description, video_portfolio, card_number FROM model";
+  const sql = "SELECT id, name, age, genre, height, location, category, description, video_portfolio, card_number, is_pro FROM model";
 
   db.query(sql, (err, results) => {
     if (err) {
