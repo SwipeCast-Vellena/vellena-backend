@@ -1,6 +1,6 @@
 const express= require("express");
 const {protect}=require("../middlewares/authMiddleware.js");
-const {admin}=require("../utils/firebase_admin.js");
+const {admin, isInitialized}=require("../utils/firebase_admin.js");
 
 const router = express.Router();
 
@@ -8,6 +8,13 @@ const router = express.Router();
 // Protected by your JWT middleware (protect)
 router.post("/token", protect, async (req, res) => {
     try {
+      if (!isInitialized() || !admin) {
+        return res.status(503).json({ 
+          ok: false, 
+          msg: "Firebase not configured. Please set up Firebase. See FIREBASE_SETUP.md"
+        });
+      }
+
       const backendUser = req.user;
       if (!backendUser || !backendUser.id) return res.status(401).json({ ok: false, msg: "Unauthorized" });
   

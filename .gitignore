@@ -1,18 +1,6 @@
-# Node modules
 node_modules/
-
-# Environment variables
 .env
-
-# Logs
-logs
-*.log
-
-# OS & editor files
-.DS_Store
-Thumbs.db
-.vscode/
-.idea/
-
-# Ignore service account keys
 serviceAccountKey.json
+uploads/
+*.log
+.DS_Store

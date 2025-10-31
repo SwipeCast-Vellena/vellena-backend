@@ -36,6 +36,10 @@ async function resolveCandidateUids(reqUser) {
 }
 
 async function verifyParticipant(chatId, reqUser) {
+  if (!firestore) {
+    return { ok: false, status: 503, msg: "Firebase not configured. Please set up Firebase." };
+  }
+
   const chatRef = firestore.collection("chats").doc(String(chatId));
   const chatSnap = await chatRef.get();
   if (!chatSnap.exists) return { ok: false, status: 404, msg: "Chat not found" };
@@ -56,6 +60,13 @@ async function verifyParticipant(chatId, reqUser) {
 // ---------- POST /:chatId/message ----------
 router.post("/:chatId/message", protect, async (req, res) => {
   try {
+    if (!firestore) {
+      return res.status(503).json({ 
+        ok: false, 
+        msg: "Chat service unavailable. Firebase not configured. See FIREBASE_SETUP.md"
+      });
+    }
+
     const chatId = req.params.chatId;
     const backendUser = req.user;
 
@@ -140,9 +151,33 @@ router.get("/:chatId/messages", protect, async (req, res) => {
     if (!chatId)
       return res.status(400).json({ success: false, msg: "chatId required" });
 
+    if (!firestore) {
+      console.warn("⚠️ Firebase not initialized - returning empty chat");
+      return res.json({ 
+        success: true, 
+        title: "Chat",
+        agencyInfo: null,
+        messages: []
+      });
+    }
+
+    console.log(`📨 Fetching messages for chat: ${chatId}`);
+    
     const chatRef = firestore.collection("chats").doc(chatId);
-    const chatSnap = await chatRef.get();
+    let chatSnap;
+    try {
+      chatSnap = await chatRef.get();
+    } catch (firestoreErr) {
+      console.error("❌ Firestore get error:", firestoreErr.message);
+      return res.status(500).json({ 
+        success: false, 
+        msg: "Failed to access Firestore",
+        error: process.env.NODE_ENV === "development" ? firestoreErr.message : undefined
+      });
+    }
+    
     if (!chatSnap.exists) {
+      console.log(`⚠️ Chat ${chatId} not found in Firestore`);
       return res.status(404).json({ success: false, msg: "Chat not found" });
     }
 
