@@ -4,19 +4,53 @@ dotenv.config();
 
 const db = mysql.createPool({
   connectionLimit: 10,
-  host: process.env.DB_HOST,
-  user: process.env.DB_USER,
-  password: process.env.DB_PASSWORD,
-  database: process.env.DB_NAME,
+  host: process.env.DB_HOST || 'localhost',
+  port: process.env.DB_PORT || 3306,
+  user: process.env.DB_USER || 'root',
+  password: process.env.DB_PASSWORD || 'tigerbro512',
+  database: process.env.DB_NAME || 'vellena',
+  // Allow connection without database first (to create it if needed)
+  multipleStatements: true,
 });
 
 // Test and log connection once at startup
 db.getConnection((err, connection) => {
   if (err) {
     console.error("❌ Database connection failed:", err.message);
+    console.error("Connection details:", {
+      host: process.env.DB_HOST || 'localhost',
+      port: process.env.DB_PORT || 3306,
+      user: process.env.DB_USER || 'root',
+      database: process.env.DB_NAME || 'vellena'
+    });
+    
+    // If database doesn't exist, try to create it
+    if (err.code === 'ER_BAD_DB_ERROR' || err.code === 'ER_ACCESS_DENIED_ERROR') {
+      console.log("ℹ️ Attempting to create database if it doesn't exist...");
+      const createDbConnection = mysql.createConnection({
+        host: process.env.DB_HOST || 'localhost',
+        port: process.env.DB_PORT || 3306,
+        user: process.env.DB_USER || 'root',
+        password: process.env.DB_PASSWORD || 'tigerbro512',
+      });
+      
+      const dbName = process.env.DB_NAME || 'vellena';
+      createDbConnection.query(`CREATE DATABASE IF NOT EXISTS \`${dbName}\` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci`, (createErr) => {
+        if (createErr) {
+          console.error("❌ Failed to create database:", createErr.message);
+          console.log("\n📝 Please create the database manually using MySQL:");
+          console.log(`   CREATE DATABASE IF NOT EXISTS \`${dbName}\` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;`);
+        } else {
+          console.log(`✅ Database '${dbName}' created successfully`);
+          console.log("🔄 Please restart the server to connect to the new database");
+        }
+        createDbConnection.end();
+      });
+    }
     return;
   }
   console.log("✅ Connected to MySQL database");
+  console.log("📊 Database:", process.env.DB_NAME || 'vellena', "| Host:", process.env.DB_HOST || 'localhost', "| Port:", process.env.DB_PORT || 3306);
 
   const createUserTable = `
     CREATE TABLE IF NOT EXISTS users (

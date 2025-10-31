@@ -9,6 +9,18 @@ exports.createOrUpdateModelProfile = (req, res) => {
     return res.status(400).json({ msg: "Please fill all required fields" });
   }
 
+  // Fix height format: convert comma to dot for decimal separator
+  let normalizedHeight = height;
+  if (typeof height === 'string') {
+    normalizedHeight = height.replace(',', '.'); // Convert "1,65" to "1.65"
+  }
+  // Ensure it's a valid number
+  const heightNum = parseFloat(normalizedHeight);
+  if (isNaN(heightNum) || heightNum <= 0) {
+    return res.status(400).json({ msg: "Invalid height value" });
+  }
+  normalizedHeight = heightNum;
+
   const checkSql = "SELECT id FROM model WHERE user_id = ?";
 
   db.query(checkSql, [userId], (err, results) => {
@@ -25,7 +37,7 @@ exports.createOrUpdateModelProfile = (req, res) => {
         SET name=?, age=?, genre=?, height=?, location=?,category=?, description=?, video_portfolio=?, card_number=? 
         WHERE user_id=?`;
 
-      db.query(updateSql, [name, age, genre, height, location,category, description, video_portfolio,card_number, userId], (err) => {
+      db.query(updateSql, [name, age, genre, normalizedHeight, location,category, description, video_portfolio,card_number, userId], (err) => {
         if (err) {
           console.error("Failed to update profile:", err);
           return res.status(500).json({ msg: "Failed to update profile", error: err.message });
@@ -38,7 +50,7 @@ exports.createOrUpdateModelProfile = (req, res) => {
         INSERT INTO model (user_id, name, age, genre, height, location,category, description, video_portfolio, card_number)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?,?)`;
 
-      db.query(insertSql, [userId, name, age, genre, height, location,category, description, video_portfolio, card_number], (err) => {
+      db.query(insertSql, [userId, name, age, genre, normalizedHeight, location,category, description, video_portfolio, card_number], (err) => {
         if (err) {
           console.error("Failed to create profile:", err);
           return res.status(500).json({ msg: "Failed to create profile", error: err.message });
